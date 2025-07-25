@@ -1,46 +1,18 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Live Camera</title>
+  <meta charset="UTF-8">
+  <title>Quantize Recolor Test</title>
   <style>
-    body, html {
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      background: black;
-    }
-    video {
-      width: 100vw;
-      height: 100vh;
-      object-fit: cover;
-    }
+    body { font-family: sans-serif; padding: 1em; }
+    canvas { border: 1px solid #ccc; display: block; margin-bottom: 10px; }
   </style>
 </head>
 <body>
-  <video id="video" autoplay playsinline></video>
+  <canvas id="canvas"></canvas>
+  <button id="recolorBtn">Quantize & Recolor</button>
 
-  <script>
-    async function startCamera() {
-      try {
-        const constraints = {
-          audio: false,
-          video: {
-            facingMode: { ideal: "environment" }, // Rear camera
-          }
-        };
-
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
-        const video = document.getElementById('video');
-        video.srcObject = stream;
-      } catch (err) {
-        alert("Error accessing camera: " + err.message);
-        console.error(err);
-      }
-    }
-
-    window.addEventListener('load', startCamera);
-  </script>
+  <script src="quantize.js"></script>
+  <script src="main.js"></script>
 </body>
 </html>

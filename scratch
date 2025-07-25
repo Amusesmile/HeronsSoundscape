@@ -1,0 +1,63 @@
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+// const colorThief = new ColorThief();
+// const quantize = colorThief.quantize;
+
+const img = new Image();
+const index = Math.floor(Math.random() * 4) + 1;
+img.src = `photos/${index}.png`;
+img.onload = () => {
+  const scale = Math.min(600 / img.width, 1);
+  canvas.width = img.width * scale;
+  canvas.height = img.height * scale;
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+};
+
+function colorDistanceSq(c1, c2) {
+  return (
+    (c1[0] - c2[0]) ** 2 +
+    (c1[1] - c2[1]) ** 2 +
+    (c1[2] - c2[2]) ** 2
+  );
+}
+
+function quantizeAndRecolor() {
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const data = imageData.data;
+  const pixels = [];
+
+  // Step 1: Sample some pixels (downsample to ~10k for speed)
+  for (let i = 0; i < data.length; i += 16) {
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
+    pixels.push([r, g, b]);
+  }
+
+  // Step 2: Quantize to 6 colors
+  const colorMap = MMCQ.quantize(pixels, 14);
+  const palette = colorMap.palette();
+
+  // Step 3: Recolor every pixel based on closest palette color
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i], g = data[i + 1], b = data[i + 2];
+    let best = palette[0];
+    let minDist = Infinity;
+
+    for (const c of palette) {
+      const dist = colorDistanceSq([r, g, b], c);
+      if (dist < minDist) {
+        minDist = dist;
+        best = c;
+      }
+    }
+
+    data[i] = best[0];
+    data[i + 1] = best[1];
+    data[i + 2] = best[2];
+  }
+
+  ctx.putImageData(imageData, 0, 0);
+}
+
+document.getElementById("recolorBtn").addEventListener("click", quantizeAndRecolor);

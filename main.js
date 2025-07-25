@@ -19,6 +19,44 @@ img.onload = () => {
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 };
 
+function printClusterInfo(cluster) {
+  console.log("Cluster Info:");
+  console.log("  Size:", cluster.size);
+  console.log("  Centroid (approx):", cluster.centroid);
+  console.log("  Avg Color:", cluster.averageColor);
+  console.log("  Width:", cluster.width);
+  console.log("  Height:", cluster.height);
+}
+
+function analyzeCluster(points, data, width) {
+  let r = 0, g = 0, b = 0;
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+
+  points.forEach(([x, y]) => {
+    const idx = (y * width + x) * 4;
+    r += data[idx];
+    g += data[idx + 1];
+    b += data[idx + 2];
+
+    if (x < minX) minX = x;
+    if (x > maxX) maxX = x;
+    if (y < minY) minY = y;
+    if (y > maxY) maxY = y;
+  });
+
+  const size = points.length;
+  return {
+    pixels: points,
+    averageColor: [Math.round(r / size), Math.round(g / size), Math.round(b / size)],
+    centroid: points[0], // Using first pixel for speed, could average instead
+    size: size,
+    width: maxX - minX,
+    height: maxY - minY
+  };
+}
+
+
+
 function colorDistanceSq(c1, c2) {
   return (c1[0] - c2[0]) ** 2 + (c1[1] - c2[1]) ** 2 + (c1[2] - c2[2]) ** 2;
 }
@@ -60,24 +98,29 @@ function floodFillCluster(seedX, seedY, visited, data, width, height, thresholdS
 }
 
 function segmentImage() {
+  startClock("segment");
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
   originalImageData = imageData;
   const { width, height, data } = imageData;
   clusters = [];
 
   const visited = Array.from({ length: height }, () => Array(width).fill(false));
+
   for (let i = 0; i < SEED_COUNT; i++) {
     const x = Math.floor(Math.random() * width);
     const y = Math.floor(Math.random() * height);
     if (visited[y][x]) continue;
 
-    const cluster = floodFillCluster(x, y, visited, data, width, height, COLOR_THRESHOLD ** 2);
-    if (cluster.length >= MIN_CLUSTER_SIZE) {
+    const points = floodFillCluster(x, y, visited, data, width, height, COLOR_THRESHOLD ** 2);
+    if (points.length >= MIN_CLUSTER_SIZE) {
+      const cluster = analyzeCluster(points, data, width);
       clusters.push(cluster);
     }
   }
 
   console.log(`Found ${clusters.length} clusters`);
+  endClock("segment");
+  printClusterInfo(clusters[0]);  // Just print one for now
   animateClusterCycle();
 }
 
@@ -103,11 +146,11 @@ function animateClusterCycle() {
 
     // Highlight current cluster
     const cluster = clusters[current];
-    cluster.forEach(([x, y]) => {
+    cluster.pixels.forEach(([x, y]) => {
       const idx = (y * canvas.width + x) * 4;
-      outData[idx] = 255;     // Red highlight
-      outData[idx + 1] = 50;
-      outData[idx + 2] = 50;
+      outData[idx] = baseData[idx];     // Red highlight
+      outData[idx + 1] = baseData[idx+1];
+      outData[idx + 2] = baseData[idx+2];
     });
 
     ctx.putImageData(imageData, 0, 0);

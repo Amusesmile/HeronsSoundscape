@@ -1,6 +1,6 @@
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
-const TEMPO_MS = 200;
+const TEMPO_MS = 500;
 const SEED_COUNT = 100;
 const MIN_CLUSTER_SIZE = 100; // Minimum pixels per region
 const COLOR_THRESHOLD = 40; // Max color distance per channel
@@ -23,12 +23,13 @@ function printClusterInfo(cluster) {
   console.log("Cluster Info:");
   console.log("  Size:", cluster.size);
   console.log("  Centroid (approx):", cluster.centroid);
-  console.log("  Avg Color:", cluster.averageColor);
+  console.log("cx: ", cluster.cx, " cy: ", cluster.cy)
+  console.log("  Avg Color:", cluster.color);
   console.log("  Width:", cluster.width);
   console.log("  Height:", cluster.height);
 }
 
-function analyzeCluster(points, data, width) {
+function analyzeCluster(points, data, width, height) {
   let r = 0, g = 0, b = 0;
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
 
@@ -45,13 +46,17 @@ function analyzeCluster(points, data, width) {
   });
 
   const size = points.length;
+
   return {
     pixels: points,
-    averageColor: [Math.round(r / size), Math.round(g / size), Math.round(b / size)],
+    color: [Math.round(r / size), Math.round(g / size), Math.round(b / size)],
     centroid: points[0], // Using first pixel for speed, could average instead
+    cx: points[0][0]/width,
+    cy: points[0][1]/height,
     size: size,
     width: maxX - minX,
-    height: maxY - minY
+    height: maxY - minY,
+    longRatio: Math.max(this.width, this.height) / Math.min(this.width, this.height)
   };
 }
 
@@ -113,7 +118,7 @@ function segmentImage() {
 
     const points = floodFillCluster(x, y, visited, data, width, height, COLOR_THRESHOLD ** 2);
     if (points.length >= MIN_CLUSTER_SIZE) {
-      const cluster = analyzeCluster(points, data, width);
+      const cluster = analyzeCluster(points, data, width, height);
       clusters.push(cluster);
     }
   }
@@ -154,6 +159,8 @@ function animateClusterCycle() {
     });
 
     ctx.putImageData(imageData, 0, 0);
+    printClusterInfo(cluster);
+    playClusterSound(cluster);
     current = (current + 1) % clusters.length;
   }, TEMPO_MS);
 }

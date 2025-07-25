@@ -1,10 +1,13 @@
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
-const TEMPO_MS = 500;
+const TEMPO_MS = 100;
 const SEED_COUNT = 100;
 const MIN_CLUSTER_SIZE = 100; // Minimum pixels per region
 const COLOR_THRESHOLD = 40; // Max color distance per channel
 let clusters = [];
+
+let rhythmPattern = [];
+let rhythmStep = 0;
 
 const img = new Image();
 const photoIndex = Math.floor(Math.random() * 4) + 1;
@@ -18,6 +21,16 @@ img.onload = () => {
   canvas.height = img.height * scale;
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 };
+
+function generateRhythmPattern(beatLengthMs) {
+  const count = Math.floor(Math.random() * 16) + 8; // 8–24 steps
+  const pattern = [];
+  for (let i = 0; i < count; i++) {
+    const multiplier = Math.floor(Math.random() * 5) + 1; // 1–8
+    pattern.push(multiplier * beatLengthMs);
+  }
+  return pattern;
+}
 
 function printClusterInfo(cluster) {
   console.log("Cluster Info:");
@@ -131,38 +144,44 @@ function segmentImage() {
 
 function animateClusterCycle() {
   let current = 0;
+  const baseBeat = TEMPO_MS;
+  rhythmPattern = generateRhythmPattern(baseBeat);
+  rhythmStep = 0;
 
-  setInterval(() => {
+  function step() {
     const imageData = ctx.createImageData(canvas.width, canvas.height);
     const baseData = originalImageData.data;
     const outData = imageData.data;
 
-    // Copy original image first
     for (let i = 0; i < outData.length; i++) {
       outData[i] = baseData[i];
     }
 
-    // Fade all pixels
     for (let i = 0; i < outData.length; i += 4) {
       outData[i] = outData[i] * 0.5 + 128;
       outData[i+1] = outData[i+1] * 0.5 + 128;
       outData[i+2] = outData[i+2] * 0.5 + 128;
     }
 
-    // Highlight current cluster
     const cluster = clusters[current];
     cluster.pixels.forEach(([x, y]) => {
       const idx = (y * canvas.width + x) * 4;
-      outData[idx] = baseData[idx];     // Red highlight
-      outData[idx + 1] = baseData[idx+1];
-      outData[idx + 2] = baseData[idx+2];
+      outData[idx] = baseData[idx];
+      outData[idx + 1] = baseData[idx + 1];
+      outData[idx + 2] = baseData[idx + 2];
     });
 
     ctx.putImageData(imageData, 0, 0);
-    printClusterInfo(cluster);
     playClusterSound(cluster);
+
     current = (current + 1) % clusters.length;
-  }, TEMPO_MS);
+    rhythmStep = (rhythmStep + 1) % rhythmPattern.length;
+    const delay = rhythmPattern[rhythmStep];
+
+    setTimeout(step, delay);
+  }
+
+  step(); // initial call
 }
 
 document.getElementById("recolorBtn").addEventListener("click", segmentImage);

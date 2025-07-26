@@ -1,30 +1,21 @@
-// sound.js
-
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+//import * as Tone from 'tone';
 
-// Reverb setup (simple convolution or placeholder delay for now)
-const reverbGain = audioCtx.createGain();
-reverbGain.gain.value = 0.3;
+// sound.js
+const reverb = new Tone.Reverb({
+  decay: 60,      // length of the tail
+  preDelay: 0.01 // time before reverb starts
+}).toDestination();
 
-const dryGain = audioCtx.createGain();
-dryGain.gain.value = 1.0;
+reverb.generate(); // pre-render the impulse response
 
-const masterGain = audioCtx.createGain();
-masterGain.gain.value = 0.8;
+const dryGain = new Tone.Gain(0.2).toDestination();
+const wetGain = new Tone.Gain(0.4).connect(reverb);
 
-dryGain.connect(masterGain);
-reverbGain.connect(masterGain);
-masterGain.connect(audioCtx.destination);
-
-// Simple placeholder reverb using delay
-const reverbDelay = audioCtx.createDelay();
-reverbDelay.delayTime.value = 0.3;
-reverbDelay.connect(reverbGain);
-reverbDelay.connect(audioCtx.destination);
 
 // Scale loosely inspired by Scarborough Fair (Dorian)
-const scarboroughScale = [0, 2, 3, 5, 7, 9, 10]; // intervals in semitones
-const baseMidiNote = 12; // Middle C
+const scarboroughScale = [0, 2, 3, 5, 7, 9, 10];
+const baseMidiNote = 12;
 
 function midiToFreq(midi) {
   return 440 * Math.pow(2, (midi - 69) / 12);
@@ -38,51 +29,33 @@ function getScaleNoteFromXY(xNorm, yNorm) {
 }
 
 function playClusterSound(cluster) {
-  const now = audioCtx.currentTime;
-
+  const now = Tone.now();
   const freq = getScaleNoteFromXY(cluster.cx, cluster.cy);
-  const duration = 0.8 + Math.min(1.5, cluster.size / 1000);
+  let duration = 0.8 + Math.min(1.5, cluster.size / 1000);
+  duration *= 0.2
   const amplitude = Math.min(1.0, cluster.size / 1000);
   const pan = (cluster.cx - 0.5) * 2;
-  const reverbAmount = cluster.longRatio > 0.8 ? 0.6 : 0.2;
 
-  const osc = audioCtx.createOscillator();
-  osc.type = 'sawtooth';
-  osc.frequency.setValueAtTime(freq, now);
+  const osc = new Tone.Oscillator(freq, 'square').start(now).stop(now + duration);
 
-  const filter = audioCtx.createBiquadFilter();
-  filter.type = 'lowpass';
-  const brightness = (cluster.color[0] + cluster.color[1] + cluster.color[2]) / (3 * 255);
-  filter.frequency.setValueAtTime(400 + brightness * 3000, now);
+  const filter = new Tone.Filter({
+    type: 'lowpass',
+    frequency: 400 + ((cluster.color[0] + cluster.color[1] + cluster.color[2]) / 3) * 10
+  });
 
-  const gain = audioCtx.createGain();
-  gain.gain.setValueAtTime(0, now);
-  gain.gain.linearRampToValueAtTime(amplitude, now + 0.05);
-  gain.gain.linearRampToValueAtTime(0, now + duration);
+  const ampEnv = new Tone.AmplitudeEnvelope({
+    attack: 0.05,
+    decay: duration * 0.3,
+    sustain: 1.0,
+    release: duration * 4.5
+  });
 
-  const panner = audioCtx.createStereoPanner();
-  panner.pan.value = pan;
+  const panner = new Tone.Panner(pan);
 
-  // 🎛️ Per-cluster delay + feedback
-  const delay = audioCtx.createDelay();
-  delay.delayTime.value = 0.05 + cluster.cx * 3.0; // cx ∈ [0,1], gives 50–350ms
+  osc.chain(filter, ampEnv, panner);
 
-  const feedback = audioCtx.createGain();
-  feedback.gain.value = 0.3 + (cluster.longRatio || 0.5) * 1.0; // 0.3–0.7
+  // Send dry and wet to different paths
+  panner.fan(dryGain, wetGain);
 
-  const wetGain = audioCtx.createGain();
-  wetGain.gain.value = reverbAmount;
-
-  // Feedback loop
-  delay.connect(feedback);
-  feedback.connect(delay);
-
-  // Audio routing
-  osc.connect(filter).connect(gain);
-  gain.connect(dryGain);
-  gain.connect(panner).connect(delay).connect(wetGain).connect(audioCtx.destination);
-
-  osc.start(now);
-  osc.stop(now + duration + 0.1);
+  ampEnv.triggerAttackRelease(duration, now);
 }
-

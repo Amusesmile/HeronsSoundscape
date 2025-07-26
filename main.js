@@ -1,6 +1,6 @@
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
-const TEMPO_MS = 800;
+const TEMPO_MS = 200;
 const SEED_COUNT = 100;
 const MIN_CLUSTER_SIZE = 100; // Minimum pixels per region
 const COLOR_THRESHOLD = 40; // Max color distance per channel
@@ -172,7 +172,8 @@ function animateClusterCycle() {
     });
 
     ctx.putImageData(imageData, 0, 0);
-    playClusterSound(cluster);
+    // playClusterSound(cluster);
+    playClusterGrainSound(cluster);
 
     current = (current + 1) % clusters.length;
     rhythmStep = (rhythmStep + 1) % rhythmPattern.length;

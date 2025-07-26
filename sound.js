@@ -1,6 +1,19 @@
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 //import * as Tone from 'tone';
 
+const grainPlayer = new Tone.GrainPlayer({
+  url: 'samples/pianoTemp.mp3',
+  loop: true,
+  grainSize: 0.02,
+  overlap: 0.05
+}).toDestination();
+
+//
+
+grainPlayer.sync(); // optional if syncing to transport
+
+//await Tone.loaded(); // ensure sample is ready before using
+
 // sound.js
 const reverb = new Tone.Reverb({
   decay: 60,      // length of the tail
@@ -9,8 +22,8 @@ const reverb = new Tone.Reverb({
 
 reverb.generate(); // pre-render the impulse response
 
-const dryGain = new Tone.Gain(0.5).toDestination();
-const wetGain = new Tone.Gain(0.4).connect(reverb);
+const dryGain = new Tone.Gain(1.0).toDestination();
+const wetGain = new Tone.Gain(0.0).connect(reverb);
 
 
 // Scale loosely inspired by Scarborough Fair (Dorian)
@@ -23,7 +36,7 @@ function midiToFreq(midi) {
 
 function getScaleNoteFromXY(xNorm, yNorm) {
   const degree = Math.floor(xNorm * scarboroughScale.length);
-  const octave = 3 + Math.floor(yNorm * 3);
+  const octave = 2 + Math.floor(yNorm * 2);
   const midi = baseMidiNote + scarboroughScale[degree % scarboroughScale.length] + 12 * octave;
   return midiToFreq(midi);
 }
@@ -41,20 +54,20 @@ function playClusterSound(cluster) {
 
   // Filter
   const filter = new Tone.Filter({
-    type: 'lowpass',
-    frequency: 400 + ((cluster.color[0] + cluster.color[1] + cluster.color[2]) / 3) * 10
+    type: 'bandpass',
+    frequency: 100 + ((cluster.color[0] + cluster.color[1] + cluster.color[2]) / 3) * 10
   });
 
   // LFO on filter frequency
   const filterLFO = new Tone.LFO({
     frequency: (2 + cluster.cy * 5)*0.3, // Hz
-    min: -200,
-    max: 500
+    min: -400,
+    max: 4000
   }).start();
   filterLFO.connect(filter.frequency);
 
   // LFO on pitch
-  let pitchModRange = 0.1
+  let pitchModRange = 0.2
   const pitchLFO = new Tone.LFO({
     frequency: 2,
     min: freq-pitchModRange,
@@ -83,5 +96,57 @@ function playClusterSound(cluster) {
   // Auto stop LFOs later to clean up
   filterLFO.stop(now + duration + 1);
   pitchLFO.stop(now + duration + 1);
+}
+
+
+function playClusterGrainSound(cluster) {
+  const now = Tone.now();
+  let duration = 0.8 + Math.min(1.5, cluster.size / 1000);
+  duration *= 2.0;
+  const amplitude = Math.min(1.0, cluster.size / 1000);
+  const pan = (cluster.cx - 0.5) * 2;
+  const brightness = (cluster.color[0] + cluster.color[1] + cluster.color[2]) / (3 * 255);
+
+  // Clone a player so grains can overlap without cutting each other
+  let gs = 0.2
+  const player = new Tone.GrainPlayer({
+    url: grainPlayer.buffer,
+    loop: false,
+    grainSize: gs,//(0.15 + brightness * 0.15)*0.8,
+    overlap: 3.0,//0.03 + (1 - brightness) * 0.05,
+    playbackRate: 1.0//(0.8 + cluster.cy * 0.6)*10
+  });
+
+  const filter = new Tone.Filter({
+    type: 'bandpass',
+    frequency: 200 + brightness * 800,
+    Q: 2
+  });
+
+  const ampEnv = new Tone.AmplitudeEnvelope({
+    attack: 0.01,
+    decay: duration * 0.3,
+    sustain: 0.9,
+    release: duration * 2.5
+  });
+
+  const panner = new Tone.Panner(pan);
+
+  player.chain(filter, ampEnv, panner);
+  panner.fan(dryGain, wetGain);
+
+  // Randomize start position in buffer
+  const bufferDuration = player.buffer.duration;
+  const startOffset = (cluster.cx + cluster.cy) % 1 * (bufferDuration - duration);
+  player.start(now, startOffset, duration);
+  ampEnv.triggerAttackRelease(duration, now);
+
+  // Auto-dispose after sound ends
+  setTimeout(() => {
+    player.dispose();
+    filter.dispose();
+    ampEnv.dispose();
+    panner.dispose();
+  }, (duration + 2) * 1000);
 }
 

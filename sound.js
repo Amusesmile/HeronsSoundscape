@@ -9,7 +9,7 @@ const reverb = new Tone.Reverb({
 
 reverb.generate(); // pre-render the impulse response
 
-const dryGain = new Tone.Gain(0.2).toDestination();
+const dryGain = new Tone.Gain(0.5).toDestination();
 const wetGain = new Tone.Gain(0.4).connect(reverb);
 
 
@@ -32,17 +32,37 @@ function playClusterSound(cluster) {
   const now = Tone.now();
   const freq = getScaleNoteFromXY(cluster.cx, cluster.cy);
   let duration = 0.8 + Math.min(1.5, cluster.size / 1000);
-  duration *= 0.2
+  duration *= 1.0;
   const amplitude = Math.min(1.0, cluster.size / 1000);
   const pan = (cluster.cx - 0.5) * 2;
 
-  const osc = new Tone.Oscillator(freq, 'square').start(now).stop(now + duration);
+  // Main oscillator
+  const osc = new Tone.Oscillator(freq, 'sawtooth').start(now).stop(now + duration);
 
+  // Filter
   const filter = new Tone.Filter({
     type: 'lowpass',
     frequency: 400 + ((cluster.color[0] + cluster.color[1] + cluster.color[2]) / 3) * 10
   });
 
+  // LFO on filter frequency
+  const filterLFO = new Tone.LFO({
+    frequency: (2 + cluster.cy * 5)*0.3, // Hz
+    min: -200,
+    max: 500
+  }).start();
+  filterLFO.connect(filter.frequency);
+
+  // LFO on pitch
+  let pitchModRange = 0.1
+  const pitchLFO = new Tone.LFO({
+    frequency: 2,
+    min: freq-pitchModRange,
+    max: freq+pitchModRange
+  }).start();
+  pitchLFO.connect(osc.frequency);
+
+  // Amplitude Envelope
   const ampEnv = new Tone.AmplitudeEnvelope({
     attack: 0.05,
     decay: duration * 0.3,
@@ -50,12 +70,18 @@ function playClusterSound(cluster) {
     release: duration * 4.5
   });
 
+  // Pan
   const panner = new Tone.Panner(pan);
 
   osc.chain(filter, ampEnv, panner);
 
-  // Send dry and wet to different paths
+  // Dry and wet output
   panner.fan(dryGain, wetGain);
 
   ampEnv.triggerAttackRelease(duration, now);
+
+  // Auto stop LFOs later to clean up
+  filterLFO.stop(now + duration + 1);
+  pitchLFO.stop(now + duration + 1);
 }
+

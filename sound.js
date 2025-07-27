@@ -16,14 +16,14 @@ grainPlayer.sync(); // optional if syncing to transport
 
 // sound.js
 const reverb = new Tone.Reverb({
-  decay: 60,      // length of the tail
+  decay: 6,      // length of the tail
   preDelay: 0.01 // time before reverb starts
 }).toDestination();
 
 reverb.generate(); // pre-render the impulse response
 
 const dryGain = new Tone.Gain(1.0).toDestination();
-const wetGain = new Tone.Gain(0.1).connect(reverb);
+const wetGain = new Tone.Gain(0.0).connect(reverb);
 
 
 // Scale loosely inspired by Scarborough Fair (Dorian)
@@ -98,30 +98,31 @@ function playClusterSound(cluster) {
   pitchLFO.stop(now + duration + 1);
 }
 
-console.log("test5")
+console.log("test7")
 function playClusterGrainSound(cluster) {
   const now = Tone.now();
   let duration = 0.8 + Math.min(1.5, cluster.size / 1000);
-  duration *= 0.2;
+  duration = 5.0;//*= 0.2*Math.random()*10.0;
   const amplitude = Math.min(1.0, cluster.size / 1000);
   const pan = (cluster.cx - 0.5) * 2;
   const brightness = (cluster.color[0] + cluster.color[1] + cluster.color[2]) / (3 * 255);
 
   // Clone a player so grains can overlap without cutting each other
-  let gs = 0.1
-  let overlap = 0.001
+  let gs = 0.04
+  let overlap = 0.1
   const player = new Tone.GrainPlayer({
     url: grainPlayer.buffer,
     loop: true,
     grainSize: gs,//(0.15 + brightness * 0.15)*0.8,
     overlap: overlap,//0.03 + (1 - brightness) * 0.05,
-    playbackRate: 0.1//(0.8 + cluster.cy * 0.6)*10
+    playbackRate: 0.7,//(0.8 + cluster.cy * 0.6)*10
+    detune: -600
   });
 
   const filter = new Tone.Filter({
     type: 'bandpass',
     frequency: 200 + brightness * 800,
-    Q: 2
+    Q: 1
   });
 
   const ampEnv = new Tone.AmplitudeEnvelope({
@@ -139,7 +140,9 @@ function playClusterGrainSound(cluster) {
   // Randomize start position in buffer
   const bufferDuration = player.buffer.duration;
   const startOffset = (cluster.cx + cluster.cy) % 1 * (bufferDuration - duration);
-  player.start(now, startOffset, duration);
+  player.loopStart = startOffset;
+  player.loopEnd = startOffset+duration
+  player.start(now, startOffset);
   ampEnv.triggerAttackRelease(duration*0.4, now);//first argument is duration of sustain! 
 
   // Auto-dispose after sound ends

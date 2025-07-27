@@ -2,7 +2,7 @@ const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 //import * as Tone from 'tone';
 
 const grainPlayer = new Tone.GrainPlayer({
-  url: 'samples/pianoTemp.mp3',
+  url: 'samples/e2.mp3',
   loop: true,
   grainSize: 0.02,
   overlap: 0.05
@@ -23,7 +23,7 @@ const reverb = new Tone.Reverb({
 reverb.generate(); // pre-render the impulse response
 
 const dryGain = new Tone.Gain(1.0).toDestination();
-const wetGain = new Tone.Gain(0.0).connect(reverb);
+const wetGain = new Tone.Gain(0.1).connect(reverb);
 
 
 // Scale loosely inspired by Scarborough Fair (Dorian)
@@ -108,15 +108,15 @@ function playClusterGrainSound(cluster) {
   const brightness = (cluster.color[0] + cluster.color[1] + cluster.color[2]) / (3 * 255);
 
   // Clone a player so grains can overlap without cutting each other
-  let gs = 0.04
+  let gs = 0.05
   let overlap = 0.1
   const player = new Tone.GrainPlayer({
     url: grainPlayer.buffer,
     loop: true,
     grainSize: gs,//(0.15 + brightness * 0.15)*0.8,
     overlap: overlap,//0.03 + (1 - brightness) * 0.05,
-    playbackRate: 0.7,//(0.8 + cluster.cy * 0.6)*10
-    detune: -600
+    playbackRate: 0.3,//(0.8 + cluster.cy * 0.6)*10
+    detune: -2400+getRandomInt(0, 2)*1200
   });
 
   const filter = new Tone.Filter({

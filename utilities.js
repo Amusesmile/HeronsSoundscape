@@ -14,3 +14,9 @@ function endClock(label = 'default') {
     console.warn(`No startClock('${label}') called`);
   }
 }
+
+function getRandomInt(min, max) {
+  min = Math.ceil(min);   // Round up to ensure min is inclusive
+  max = Math.floor(max);  // Round down to ensure max is inclusive
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}

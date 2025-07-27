@@ -23,7 +23,7 @@ const reverb = new Tone.Reverb({
 reverb.generate(); // pre-render the impulse response
 
 const dryGain = new Tone.Gain(1.0).toDestination();
-const wetGain = new Tone.Gain(0.0).connect(reverb);
+const wetGain = new Tone.Gain(0.1).connect(reverb);
 
 
 // Scale loosely inspired by Scarborough Fair (Dorian)
@@ -55,7 +55,7 @@ function playClusterSound(cluster) {
   // Filter
   const filter = new Tone.Filter({
     type: 'bandpass',
-    frequency: 100 + ((cluster.color[0] + cluster.color[1] + cluster.color[2]) / 3) * 10
+    frequency: 300 + ((cluster.color[0] + cluster.color[1] + cluster.color[2]) / 3) * 10
   });
 
   // LFO on filter frequency
@@ -98,23 +98,24 @@ function playClusterSound(cluster) {
   pitchLFO.stop(now + duration + 1);
 }
 
-
+console.log("test5")
 function playClusterGrainSound(cluster) {
   const now = Tone.now();
   let duration = 0.8 + Math.min(1.5, cluster.size / 1000);
-  duration *= 2.0;
+  duration *= 0.2;
   const amplitude = Math.min(1.0, cluster.size / 1000);
   const pan = (cluster.cx - 0.5) * 2;
   const brightness = (cluster.color[0] + cluster.color[1] + cluster.color[2]) / (3 * 255);
 
   // Clone a player so grains can overlap without cutting each other
-  let gs = 0.2
+  let gs = 0.1
+  let overlap = 0.001
   const player = new Tone.GrainPlayer({
     url: grainPlayer.buffer,
-    loop: false,
+    loop: true,
     grainSize: gs,//(0.15 + brightness * 0.15)*0.8,
-    overlap: 3.0,//0.03 + (1 - brightness) * 0.05,
-    playbackRate: 1.0//(0.8 + cluster.cy * 0.6)*10
+    overlap: overlap,//0.03 + (1 - brightness) * 0.05,
+    playbackRate: 0.1//(0.8 + cluster.cy * 0.6)*10
   });
 
   const filter = new Tone.Filter({
@@ -127,7 +128,7 @@ function playClusterGrainSound(cluster) {
     attack: 0.01,
     decay: duration * 0.3,
     sustain: 0.9,
-    release: duration * 2.5
+    release: duration * 0.25
   });
 
   const panner = new Tone.Panner(pan);
@@ -139,7 +140,7 @@ function playClusterGrainSound(cluster) {
   const bufferDuration = player.buffer.duration;
   const startOffset = (cluster.cx + cluster.cy) % 1 * (bufferDuration - duration);
   player.start(now, startOffset, duration);
-  ampEnv.triggerAttackRelease(duration, now);
+  ampEnv.triggerAttackRelease(duration*0.4, now);//first argument is duration of sustain! 
 
   // Auto-dispose after sound ends
   setTimeout(() => {
@@ -147,6 +148,6 @@ function playClusterGrainSound(cluster) {
     filter.dispose();
     ampEnv.dispose();
     panner.dispose();
-  }, (duration + 2) * 1000);
+  }, (duration) * 1000);
 }
 

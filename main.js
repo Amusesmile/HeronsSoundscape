@@ -6,6 +6,8 @@ const MIN_CLUSTER_SIZE = 100; // Minimum pixels per region
 const COLOR_THRESHOLD = 40; // Max color distance per channel
 let clusters = [];
 
+console.log("tempo: ", TEMPO_MS)
+
 let rhythmPattern = [];
 let rhythmStep = 0;
 

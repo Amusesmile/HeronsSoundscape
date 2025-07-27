@@ -12,11 +12,19 @@
   <canvas id="canvas"></canvas>
   <button id="recolorBtn">Quantize & Recolor2</button>
 
+
+
   <script src="quantize.js"></script>
   <script async src="https://docs.opencv.org/4.x/opencv.js"></script>
-  <script src="utilities.js?nocache=1234567890"></script>
   <script src="https://unpkg.com/tone@latest/build/Tone.js"></script>
-  <script src="sound.js?nocache=1234567890"></script>
-  <script src="main.js?nocache=1234567890"></script>
+  <script>
+  const ts = Date.now();
+  document.write(`<script src="utilities.js?nocache=${ts}"><\/script>`);
+  document.write(`<script src="sound.js?nocache=${ts}"><\/script>`);
+  document.write(`<script src="main.js?nocache=${ts}"><\/script>`);
+</script>
+<!--   // <script src="utilities.js?nocache=1234sdf890"></script>
+  // <script src="sound.js?nocache=1234567sdf0"></script>
+  // <script src="main.js?nocache=123456asdf"></script> -->
 </body>
 </html>

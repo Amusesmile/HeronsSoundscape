@@ -2,7 +2,7 @@ const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 //import * as Tone from 'tone';
 
 const grainPlayer = new Tone.GrainPlayer({
-  url: 'samples/e2.mp3',
+  url: 'samples/e3.mp3',
   loop: true,
   grainSize: 0.02,
   overlap: 0.05
@@ -24,7 +24,8 @@ reverb.generate(); // pre-render the impulse response
 
 const dryGain = new Tone.Gain(1.0).toDestination();
 const wetGain = new Tone.Gain(0.1).connect(reverb);
-
+const analyser = new Tone.Analyser("waveform", 1024);
+dryGain.connect(analyser);
 
 // Scale loosely inspired by Scarborough Fair (Dorian)
 const scarboroughScale = [0, 2, 3, 5, 7, 9, 10];
@@ -153,4 +154,42 @@ function playClusterGrainSound(cluster) {
     panner.dispose();
   }, (duration) * 1000);
 }
+
+//const waveformCanvas = document.getElementById("waveformCanvas");
+const waveformCTX = waveformCanvas.getContext("2d");
+
+function drawWaveform() {
+  requestAnimationFrame(drawWaveform);
+
+  const values = analyser.getValue();
+  const width = waveformCanvas.width;
+  const height = waveformCanvas.height;
+  waveformCTX.clearRect(0, 0, width, height);
+
+  waveformCTX.beginPath();
+  waveformCTX.fillStyle = 'rgba(255, 255, 255, 0.5)';
+  waveformCTX.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+  waveformCTX.lineWidth = 2;
+
+  // Draw the waveform line
+  for (let i = 0; i < values.length; i++) {
+    const x = (i / values.length) * width;
+    const y = (1 - (values[i] + 1) / 2) * height;
+    if (i === 0) waveformCTX.moveTo(x, y);
+    else waveformCTX.lineTo(x, y);
+  }
+
+  // Complete the path down to bottom of canvas and back to start
+  //waveformCTX.lineTo(width, height*0.5);
+  //waveformCTX.lineTo(0, height*0.5);
+  //waveformCTX.closePath();
+
+  // Fill the shape
+  waveformCTX.fill();
+
+  // Optional: overlay stroke
+  waveformCTX.stroke();
+}
+
+drawWaveform(); // Start the visualization loop
 

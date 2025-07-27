@@ -1,4 +1,6 @@
 const canvas = document.getElementById("canvas");
+const waveformCanvas = document.getElementById("waveformCanvas");
+const startButton = document.getElementById("startButton")
 const ctx = canvas.getContext("2d");
 const TEMPO_MS = 200;
 const SEED_COUNT = 100;
@@ -22,6 +24,17 @@ img.onload = () => {
   canvas.width = img.width * scale;
   canvas.height = img.height * scale;
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+  waveformCanvas.width = canvas.width;
+  waveformCanvas.height = canvas.height*0.15
+
+  canvas.style.left = "0px"
+  canvas.style.top = "0px"
+  waveformCanvas.style.left = "0px"
+  waveformCanvas.style.top = String(canvas.height-waveformCanvas.height) + "px"
+
+  startButton.style.left = "0px"
+  startButton.style.top = String(canvas.height) + "px"
 };
 
 function generateRhythmPattern(beatLengthMs) {
@@ -206,4 +219,4 @@ function animateClusterCycle() {
   step(); // initial call
 }
 
-document.getElementById("recolorBtn").addEventListener("click", segmentImage);
+startButton.addEventListener("click", segmentImage);

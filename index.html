@@ -5,12 +5,14 @@
   <title>Quantize Recolor Test</title>
   <style>
     body { font-family: sans-serif; padding: 1em; }
-    canvas { border: 1px solid #ccc; display: block; margin-bottom: 10px; }
+    canvas { position: absolute; background-color: rgba(0, 0, 0, 0.2); border:none; outline:none; }
+    button { position: absolute; background-color: rgba(0, 0, 0, 0.2); border:none; outline:none; }
   </style>
 </head>
 <body>
-  <canvas id="canvas"></canvas>
-  <button id="recolorBtn">Quantize & Recolor2</button>
+  <canvas id="canvas" style="border:none; outline:none;"></canvas>
+  <canvas id="waveformCanvas" style="background-color: rgba(0, 0, 0, 0.2); border:none; outline:none;"></canvas>
+  <button id="startButton">Start</button>
 
 
 

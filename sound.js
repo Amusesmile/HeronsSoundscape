@@ -2,6 +2,7 @@ const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 //import * as Tone from 'tone';
 
 const grainPlayer = new Tone.GrainPlayer({
+  //url: 'samples/smallSalmon.mp3',
   url: 'samples/e3.mp3',
   loop: true,
   grainSize: 0.02,
@@ -16,7 +17,7 @@ grainPlayer.sync(); // optional if syncing to transport
 
 // sound.js
 const reverb = new Tone.Reverb({
-  decay: 6,      // length of the tail
+  decay: 60,      // length of the tail
   preDelay: 0.01 // time before reverb starts
 }).toDestination();
 
@@ -109,14 +110,14 @@ function playClusterGrainSound(cluster) {
   const brightness = (cluster.color[0] + cluster.color[1] + cluster.color[2]) / (3 * 255);
 
   // Clone a player so grains can overlap without cutting each other
-  let gs = 0.05
-  let overlap = 0.1
+  let gs = 0.01+0.1*Math.pow(brightness, 2.0);
+  let overlap = gs*10;//0.1
   const player = new Tone.GrainPlayer({
     url: grainPlayer.buffer,
     loop: true,
     grainSize: gs,//(0.15 + brightness * 0.15)*0.8,
     overlap: overlap,//0.03 + (1 - brightness) * 0.05,
-    playbackRate: 0.3,//(0.8 + cluster.cy * 0.6)*10
+    playbackRate: 0.1,//(0.8 + cluster.cy * 0.6)*10
     detune: -2400+getRandomInt(0, 2)*1200
   });
 
@@ -140,9 +141,10 @@ function playClusterGrainSound(cluster) {
 
   // Randomize start position in buffer
   const bufferDuration = player.buffer.duration;
-  const startOffset = (cluster.cx + cluster.cy) % 1 * (bufferDuration - duration);
+  const startOffset = cluster.minXN*bufferDuration//(cluster.cx + cluster.cy) % 1 * (bufferDuration - duration);
   player.loopStart = startOffset;
-  player.loopEnd = startOffset+duration
+  player.loopEnd = startOffset+cluster.widthN*bufferDuration
+  console.log("loop" + player.loopStart + " " + player.loopEnd);
   player.start(now, startOffset);
   ampEnv.triggerAttackRelease(duration*0.4, now);//first argument is duration of sustain! 
 

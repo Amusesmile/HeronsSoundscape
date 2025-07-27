@@ -55,6 +55,8 @@ function printClusterInfo(cluster) {
   console.log("  Avg Color:", cluster.color);
   console.log("  Width:", cluster.width);
   console.log("  Height:", cluster.height);
+  console.log("  WidthN:", cluster.widthN);
+  console.log("  minXN:", cluster.minXN);
 }
 
 function analyzeCluster(points, data, width, height) {
@@ -81,9 +83,16 @@ function analyzeCluster(points, data, width, height) {
     centroid: points[0], // Using first pixel for speed, could average instead
     cx: points[0][0]/width,
     cy: points[0][1]/height,
+    minX: minX,
+    minXN: minX/width,
+    minY: minY,
+    maxX: maxX, 
+    maxY: maxY,
     size: size,
     width: maxX - minX,
     height: maxY - minY,
+    widthN: (maxX - minX)/width,
+    // heightN: this.height/height,
     longRatio: Math.max(this.width, this.height) / Math.min(this.width, this.height)
   };
 }

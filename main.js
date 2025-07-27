@@ -3,7 +3,7 @@ const waveformCanvas = document.getElementById("waveformCanvas");
 const startButton = document.getElementById("startButton")
 const video = document.getElementById("video");
 const ctx = canvas.getContext("2d");
-const TEMPO_MS = 100;
+const TEMPO_MS = 20;
 const MAX_CLUSTERS = 20;
 const MIN_CLUSTER_SIZE = 100; // Minimum pixels per region
 const COLOR_THRESHOLD = 40; // Max color distance per channel
@@ -13,6 +13,10 @@ let rhythmPattern = [];
 let rhythmStep = 0;
 let originalImageData;
 let currentVideoFrame = null;
+
+const videoCanvas = document.createElement("canvas");
+const videoCtx = videoCanvas.getContext("2d");
+
 
 console.log("tempo: ", TEMPO_MS)
 
@@ -86,6 +90,39 @@ video.addEventListener('loadedmetadata', () => {
 
 video.load()
 
+// function drawMaskedClusters() {
+//   ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+//   // Step 1: Draw faded base frame
+//   ctx.globalAlpha = 0.3;  // for "faded" look
+//   ctx.drawImage(videoCanvas, 0, 0);
+//   ctx.globalAlpha = 1.0;
+
+//   // Step 2: Draw highlighted clusters
+//   for (const cluster of clusters) {
+//     if (!cluster.playing || !cluster.pixels) continue;
+
+//     ctx.save();
+//     ctx.beginPath();
+//     for (const [x, y] of cluster.pixels) {
+//       ctx.rect(x, y, 1, 1);
+//     }
+//     ctx.clip();
+
+//     ctx.drawImage(videoCanvas, 0, 0); // only draws in clipped region
+//     ctx.restore();
+//   }
+// }
+
+
+// function drawVideoFrame() {
+//   videoCtx.drawImage(video, 0, 0, canvas.width, canvas.height); // ← offscreen copy
+//   currentVideoFrame = videoCtx.getImageData(0, 0, canvas.width, canvas.height); // still used for flood fill
+//   drawMaskedClusters(); // now only GPU drawing on visible canvas
+//   requestAnimationFrame(drawVideoFrame);
+// }
+
+
 function drawVideoFrame() {
   startClock("drawVideo");
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -98,35 +135,55 @@ function drawVideoFrame() {
   // }
 
   startClock("change data");
+  // Step 1: Draw the video frame
+ctx.putImageData(currentVideoFrame, 0, 0);
+
+// Step 2: Apply semi-transparent white overlay
+ctx.fillStyle = "rgba(255, 255, 255, 0.0)";
+ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+// Step 3: Restore true color for cluster pixels
+const baseData = currentVideoFrame.data;
+const brightFrame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+const brightData = brightFrame.data;
+
+const now = Date.now();
+
+for (const cluster of clusters) {
+  if (!cluster.playing || !cluster.pixels) continue;
+
+  const elapsed = (now - cluster.startTime) / 1000.0; // seconds
+  const flashAmount = Math.max(0, 1.0 - elapsed); // from 1 → 0 over 1 sec
+
+  for (const [x, y] of cluster.pixels) {
+    const idx = (y * canvas.width + x) * 4;
 
 
-  //method 1
-  // const baseFrame = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const baseData = currentVideoFrame.data;
+    const r = baseData[idx];
+    const g = baseData[idx + 1];
+    const b = baseData[idx + 2];
 
-  for (const cluster of clusters) {
-    if (!cluster.playing || !cluster.pixels) continue;
+    // Flash to white or red — uncomment the one you prefer:
+    
+    // Flash to white:
+    // brightData[idx]     = r + (255 - r) * flashAmount;
+    // brightData[idx + 1] = g + (255 - g) * flashAmount;
+    // brightData[idx + 2] = b + (255 - b) * flashAmount;
+    // brightData[idx + 3] = 255; // optional
 
-    for (const [x, y] of cluster.pixels) {
-      const idx = (y * canvas.width + x) * 4;
-
-      // Optionally boost brightness or tint cluster pixels
-      // baseData[idx]     = Math.min(255, baseData[idx] + 40);     // R
-      // baseData[idx + 1] = Math.min(255, baseData[idx + 1] + 20); // G
-      // baseData[idx + 2] = Math.min(255, baseData[idx + 2] + 20); // B
-      // baseData[idx + 3] = 255; // leave alpha alone
-      baseData[idx]     = 255;     // R
-      baseData[idx + 1] = 0; // G
-      baseData[idx + 2] = 0; // B
-    }
+    // Flash to bright red:
+    brightData[idx]     = r + (255 - r) * flashAmount;
+    brightData[idx + 1] = g * (1.0 - flashAmount); // fade out green
+    brightData[idx + 2] = b * (1.0 - flashAmount); // fade out blue
   }
+}
 
-  // Put modified pixels back onto canvas
-  ctx.putImageData(currentVideoFrame, 0, 0);
-  //endClock("change data");
+// Put the vivid cluster pixels back on top
+ctx.putImageData(brightFrame, 0, 0);
 
   requestAnimationFrame(drawVideoFrame);
 }
+
 
 function printClusterInfo(cluster) {
   console.log("Cluster Info:");

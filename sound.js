@@ -104,13 +104,13 @@ console.log("test7")
 function playClusterGrainSound(cluster) {
   const now = Tone.now();
   let duration = 0.8 + Math.min(1.5, cluster.size / 1000);
-  duration = 5.0;//*= 0.2*Math.random()*10.0;
+  duration = 0.3;//*= 0.2*Math.random()*10.0;
   const amplitude = Math.min(1.0, cluster.size / 1000);
   const pan = (cluster.cx - 0.5) * 2;
   const brightness = (cluster.color[0] + cluster.color[1] + cluster.color[2]) / (3 * 255);
 
   // Clone a player so grains can overlap without cutting each other
-  let gs = 0.01+0.1*Math.pow(brightness, 2.0);
+  let gs = 0.01+0.01*Math.pow(brightness, 2.0);
   let overlap = gs*10;//0.1
   const player = new Tone.GrainPlayer({
     url: grainPlayer.buffer,

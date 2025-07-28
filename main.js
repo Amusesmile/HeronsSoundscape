@@ -17,6 +17,7 @@ let rhythmStep = 0;
 let originalImageData;
 let currentVideoFrame = null;
 let useCamera = true; // Flip this to true to use live video input
+let started = true;
 
 const videoCanvas = document.createElement("canvas");
 const videoCtx = videoCanvas.getContext("2d");
@@ -356,20 +357,35 @@ function animateClusterCycle() {
   rhythmPattern = generateRhythmPattern(baseBeat);
   rhythmStep = 0;
 
-  function step() {
-    playNextCluster();
-    playClusterGrainSound(clusters[currentCluster]);
-    rhythmStep = (rhythmStep + 1) % rhythmPattern.length;
-    const delay = rhythmPattern[rhythmStep];
+  if(!started)
+  {
+    started = true;
+    function step() {
+      playNextCluster();
+      playClusterGrainSound(clusters[currentCluster]);
+      rhythmStep = (rhythmStep + 1) % rhythmPattern.length;
+      const delay = rhythmPattern[rhythmStep];
 
-    setTimeout(step, delay);
+      setTimeout(step, delay);
+    }
+    step(); // initial call
   }
-
-  step(); // initial call
 }
 
+function unlockAudio() {
+  const audio = new Audio();
+  audio.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0YQAAAAA="; // 1ms silence
+  audio.play().then(() => {
+    console.log("Audio unlocked");
+  }).catch(err => {
+    console.warn("Audio unlock failed", err);
+  });
+}
 
-startButton.addEventListener("click", createClusters);
+startButton.addEventListener("click", function(){
+  unlockAudio();
+  createClusters();
+});
 pauseButton.addEventListener("click", function(){
   if(video.paused){
     video.play();

@@ -21,26 +21,42 @@ let started = false;
 
 const videoCanvas = document.createElement("canvas");
 const videoCtx = videoCanvas.getContext("2d");
+async function setupRearCameraStream() {
+  const devices = await navigator.mediaDevices.enumerateDevices(); // ✅ await!
+  const videoDevices = devices.filter(d => d.kind === "videoinput");
 
-if (useCamera) {
-  navigator.mediaDevices.getUserMedia({ 
-    video: true, 
-    audio: false, 
-    facingMode: { exact: 'environment' }, // rear camera
-    width: { ideal: 600, max: 600 },      // downscale for performance
-    height: { ideal: 640 },               // we'll correct this after measuring
-  })
-    .then(stream => {
-      video.srcObject = stream;
+  const rearCamera = videoDevices.find(d =>
+    /back|rear|environment/i.test(d.label)
+  ) || videoDevices[videoDevices.length - 1]; // fallback
+
+  const constraints = {
+    video: {
+      deviceId: rearCamera.deviceId,
+      width: { ideal: 640, max: 640 },
+      height: { ideal: 640 }
+    },
+    audio: false
+  };
+
+  const stream = await navigator.mediaDevices.getUserMedia(constraints);
+  video.srcObject = stream;
+
+  return new Promise(resolve => {
+    video.onloadedmetadata = () => {
       video.play();
-    })
-    .catch(err => {
-      console.error("Error accessing camera:", err);
-    });
-} else {
-  video.src = "video/IMG_6299.mov";
-  video.load();
+      resolve();
+    };
+  });
 }
+
+(async () => {
+  if (useCamera) {
+    await setupRearCameraStream();
+  } else {
+    video.src = "video/IMG_6299.mov";
+    video.load();
+  }
+})();
 
 
 console.log("tempo: ", TEMPO_MS)

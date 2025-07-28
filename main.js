@@ -2,26 +2,58 @@ const canvas = document.getElementById("canvas");
 const waveformCanvas = document.getElementById("waveformCanvas");
 const startButton = document.getElementById("startButton")
 const pauseButton = document.getElementById("pauseButton")
+const overlay = document.getElementById("overlayText")
 const video = document.getElementById("video");
 const ctx = canvas.getContext("2d");
 const TEMPO_MS = 50;
 const MAX_CLUSTERS = 40;
 const MIN_CLUSTER_SIZE = 100; // Minimum pixels per region
 const COLOR_THRESHOLD = 40; // Max color distance per channel
+const FADE_MS = 800;
 let currentCluster = -1;
 let clusters = [];
 let rhythmPattern = [];
 let rhythmStep = 0;
 let originalImageData;
 let currentVideoFrame = null;
+let useCamera = false; // Flip this to true to use live video input
 
 const videoCanvas = document.createElement("canvas");
 const videoCtx = videoCanvas.getContext("2d");
 
+if (useCamera) {
+  navigator.mediaDevices.getUserMedia({ 
+    video: true, 
+    audio: false, 
+    facingMode: { ideal: "environment" }, // rear camera
+    width: { ideal: 600, max: 600 },      // downscale for performance
+    height: { ideal: 640 },               // we'll correct this after measuring
+  })
+    .then(stream => {
+      video.srcObject = stream;
+      video.play();
+    })
+    .catch(err => {
+      console.error("Error accessing camera:", err);
+    });
+} else {
+  video.src = "video/IMG_6299.mov";
+  video.load();
+}
+
 
 console.log("tempo: ", TEMPO_MS)
 
+function toggleOverlay(){
+  if(overlay.style.visibility == "hidden"){
+    overlay.style.visibility = "visible";
+  } else{
+    overlay.style.visibility = "hidden";//"visible" is opposite 
+  }
+}
+
 function createClusters(){
+  toggleOverlay();
   //call after canvas width/height have been determined 
 
   // const startTime = Date.now();
@@ -66,13 +98,39 @@ function generateRhythmPattern(beatLengthMs) {
   return pattern;
 }
 
-video.addEventListener('loadedmetadata', () => {
+video.addEventListener('canplay', () => {
   console.log("video loaded");
-  const scale = Math.min(600 / video.videoWidth, 1);
-  canvas.width = video.videoWidth * scale;
-  canvas.height = video.videoHeight * scale;
-  //ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
+  // Get available screen size
+  const screenWidth = window.innerWidth;
+  const screenHeight = window.innerHeight;
+
+  const buttonAreaHeight = 100; // Reserve 100px at bottom
+
+  const availableHeight = screenHeight - buttonAreaHeight;
+
+  // Video's native aspect ratio
+  const aspect = video.videoWidth / video.videoHeight;
+
+  // Calculate max canvas size within constraints
+  let canvasWidth = Math.min(screenWidth, 600);
+  let canvasHeight = canvasWidth / aspect;
+
+  if (canvasHeight > availableHeight) {
+    canvasHeight = availableHeight;
+    canvasWidth = canvasHeight * aspect;
+  }
+
+  // Round to integers
+  canvas.width = Math.floor(canvasWidth);
+  canvas.height = Math.floor(canvasHeight);
+
+  // Center the canvas horizontally if needed
+  canvas.style.position = "absolute";
+  canvas.style.left = `${(screenWidth - canvas.width) / 2}px`;
+  canvas.style.top = `0px`;
+
+  console.log("VIDEO dimensions: ", video.videoWidth, video.videoHeight);
   waveformCanvas.width = canvas.width;
   waveformCanvas.height = canvas.height*0.15
 
@@ -86,6 +144,11 @@ video.addEventListener('loadedmetadata', () => {
   pauseButton.style.left = "100px"
   pauseButton.style.top = String(canvas.height) + "px"
 
+  overlay.style.left = "0px"
+  overlay.style.top = "0px"
+  overlay.style.width = canvas.width + "px";
+  overlay.style.height = canvas.height + "px";
+
   //createClusters();
 
   drawVideoFrame(); // start animation loop
@@ -93,43 +156,14 @@ video.addEventListener('loadedmetadata', () => {
 
 video.load()
 
-// function drawMaskedClusters() {
-//   ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-//   // Step 1: Draw faded base frame
-//   ctx.globalAlpha = 0.3;  // for "faded" look
-//   ctx.drawImage(videoCanvas, 0, 0);
-//   ctx.globalAlpha = 1.0;
-
-//   // Step 2: Draw highlighted clusters
-//   for (const cluster of clusters) {
-//     if (!cluster.playing || !cluster.pixels) continue;
-
-//     ctx.save();
-//     ctx.beginPath();
-//     for (const [x, y] of cluster.pixels) {
-//       ctx.rect(x, y, 1, 1);
-//     }
-//     ctx.clip();
-
-//     ctx.drawImage(videoCanvas, 0, 0); // only draws in clipped region
-//     ctx.restore();
-//   }
-// }
-
-
-// function drawVideoFrame() {
-//   videoCtx.drawImage(video, 0, 0, canvas.width, canvas.height); // ← offscreen copy
-//   currentVideoFrame = videoCtx.getImageData(0, 0, canvas.width, canvas.height); // still used for flood fill
-//   drawMaskedClusters(); // now only GPU drawing on visible canvas
-//   requestAnimationFrame(drawVideoFrame);
-// }
-
-
 function drawVideoFrame() {
   startClock("drawVideo");
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-  currentVideoFrame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  if(!video.paused)
+  {
+    currentVideoFrame = ctx.getImageData(0, 0, canvas.width, canvas.height);  
+  }
+  
   //endClock("drawVideo");
   // for (const cluster of clusters) {
   //   if (cluster.playing && cluster.imageDataOverlay) {
@@ -155,7 +189,7 @@ const now = Date.now();
 for (const cluster of clusters) {
   if (!cluster.playing || !cluster.pixels) continue;
 
-  const elapsed = (now - cluster.startTime) / 1000.0; // seconds
+  const elapsed = (now - cluster.startTime) / FADE_MS; // seconds
   const flashAmount = Math.max(0, 1.0 - elapsed); // from 1 → 0 over 1 sec
 
   for (const [x, y] of cluster.pixels) {
@@ -287,7 +321,7 @@ function playNextCluster() {
   const now = Date.now();
   for(let i = 0;i<clusters.length;i++)
   {
-    const elapsed = (now - clusters[i].startTime) / 1000.0; // seconds
+    const elapsed = (now - clusters[i].startTime) / FADE_MS; // seconds
     if(elapsed > 1000.0){
       custers[i].playing = false;
     }

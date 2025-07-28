@@ -176,7 +176,7 @@ function drawWaveform() {
   // Draw the waveform line
   for (let i = 0; i < values.length; i++) {
     const x = (i / values.length) * width;
-    const y = (1 - (values[i] + 1) / 2) * height;
+    const y = (1 - (values[i]*4.0 + 1) / 2) * height;
     if (i === 0) waveformCTX.moveTo(x, y);
     else waveformCTX.lineTo(x, y);
   }

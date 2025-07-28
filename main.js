@@ -1,10 +1,11 @@
 const canvas = document.getElementById("canvas");
 const waveformCanvas = document.getElementById("waveformCanvas");
 const startButton = document.getElementById("startButton")
+const pauseButton = document.getElementById("pauseButton")
 const video = document.getElementById("video");
 const ctx = canvas.getContext("2d");
-const TEMPO_MS = 20;
-const MAX_CLUSTERS = 20;
+const TEMPO_MS = 50;
+const MAX_CLUSTERS = 40;
 const MIN_CLUSTER_SIZE = 100; // Minimum pixels per region
 const COLOR_THRESHOLD = 40; // Max color distance per channel
 let currentCluster = -1;
@@ -82,6 +83,8 @@ video.addEventListener('loadedmetadata', () => {
 
   startButton.style.left = "0px"
   startButton.style.top = String(canvas.height) + "px"
+  pauseButton.style.left = "100px"
+  pauseButton.style.top = String(canvas.height) + "px"
 
   //createClusters();
 
@@ -139,7 +142,7 @@ function drawVideoFrame() {
 ctx.putImageData(currentVideoFrame, 0, 0);
 
 // Step 2: Apply semi-transparent white overlay
-ctx.fillStyle = "rgba(255, 255, 255, 0.0)";
+ctx.fillStyle = "rgba(0, 0, 0, 0.0)";
 ctx.fillRect(0, 0, canvas.width, canvas.height);
 
 // Step 3: Restore true color for cluster pixels
@@ -278,8 +281,18 @@ function playNextCluster() {
   if (!currentVideoFrame) return;
   if(currentCluster > -1)
   {
-    clusters[currentCluster].playing = false;
+    //clusters[currentCluster].playing = false;
   }
+
+  const now = Date.now();
+  for(let i = 0;i<clusters.length;i++)
+  {
+    const elapsed = (now - clusters[i].startTime) / 1000.0; // seconds
+    if(elapsed > 1000.0){
+      custers[i].playing = false;
+    }
+  }
+
   currentCluster = (currentCluster+1)%clusters.length;
   const imageData = currentVideoFrame;
   //originalImageData = imageData;
@@ -321,4 +334,13 @@ function animateClusterCycle() {
   step(); // initial call
 }
 
+
 startButton.addEventListener("click", createClusters);
+pauseButton.addEventListener("click", function(){
+  if(video.paused){
+    video.play();
+  } else{
+    video.pause()  
+  }
+  
+});

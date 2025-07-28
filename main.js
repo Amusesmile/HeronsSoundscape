@@ -17,7 +17,7 @@ let rhythmStep = 0;
 let originalImageData;
 let currentVideoFrame = null;
 let useCamera = true; // Flip this to true to use live video input
-let started = true;
+let started = false;
 
 const videoCanvas = document.createElement("canvas");
 const videoCtx = videoCanvas.getContext("2d");

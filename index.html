@@ -1,13 +1,25 @@
 <!DOCTYPE html>
 <html>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <head>
   <meta charset="UTF-8">
   <title>Quantize Recolor Test</title>
   <style>
-    body { font-family: sans-serif; padding: 1em; }
+    body { 
+      font-family: sans-serif; 
+      padding: 1em;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      touch-action: none; /* disables double-tap zoom on some devices */
+      height: 100%;
+      width: 100%;
+      background: black; 
+    }
     canvas { position: absolute; background-color: rgba(0, 0, 0, 0.2); border:none; outline:none; }
-    button { position: absolute; background-color: rgba(0, 0, 0, 0.2); border:none; outline:none; }
+    button { position: absolute; background-color: rgba(200, 200, 200, 1.0); border:none; outline:none; }
     video { display: none;}
+    select { position: absolute;}
     #overlayText {
       position: absolute;
       top: 0;
@@ -66,6 +78,11 @@
   <button id="pauseButton">Pause</button>
   <!-- <video id="video" src="video/IMG_6299.mov" autoplay loop muted playsinline></video> -->
   <video id="video" autoplay loop muted playsinline></video>
+
+  <select id="camera-select">
+    <option>Choose camera</option>
+  </select>
+
 
 
   <script src="quantize.js"></script>

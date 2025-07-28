@@ -4,6 +4,7 @@ const startButton = document.getElementById("startButton")
 const pauseButton = document.getElementById("pauseButton")
 const overlay = document.getElementById("overlayText")
 const video = document.getElementById("video");
+const cameraSelect = document.getElementById("camera-select");
 const ctx = canvas.getContext("2d");
 const TEMPO_MS = 50;
 const MAX_CLUSTERS = 40;
@@ -21,37 +22,64 @@ let started = false;
 
 const videoCanvas = document.createElement("canvas");
 const videoCtx = videoCanvas.getContext("2d");
-async function setupRearCameraStream() {
-  const devices = await navigator.mediaDevices.enumerateDevices(); // ✅ await!
-  const videoDevices = devices.filter(d => d.kind === "videoinput");
 
-  const rearCamera = videoDevices.find(d =>
-    /back|rear|environment/i.test(d.label)
-  ) || videoDevices[videoDevices.length - 1]; // fallback
+let currentStream;
+
+async function getCameraDevices() {
+  const devices = await navigator.mediaDevices.enumerateDevices();
+  return devices.filter(d => d.kind === 'videoinput');
+}
+
+function stopCamera() {
+  if (currentStream) {
+    currentStream.getTracks().forEach(track => track.stop());
+    currentStream = null;
+  }
+}
+
+async function startCamera(videoDeviceId = null) {
+  stopCamera();
 
   const constraints = {
+    audio: false,
     video: {
-      deviceId: rearCamera.deviceId,
-      width: { ideal: 640, max: 640 },
-      height: { ideal: 640 }
+      deviceId: videoDeviceId ? { exact: videoDeviceId } : undefined,
+      facingMode: 'environment', // fallback
+      width: { ideal: 640 },
+      height: { ideal: 640 },
+      aspectRatio: matchMedia('all and (orientation:landscape)').matches ? 16 / 9 : 9 / 16,
     },
-    audio: false
   };
 
-  const stream = await navigator.mediaDevices.getUserMedia(constraints);
-  video.srcObject = stream;
-
-  return new Promise(resolve => {
-    video.onloadedmetadata = () => {
-      video.play();
-      resolve();
-    };
-  });
+  try {
+    currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+    video.srcObject = currentStream;
+    await video.play();
+  } catch (e) {
+    console.error("Camera start error:", e);
+  }
 }
+
+cameraSelect.addEventListener("change", async () => {
+  await startCamera(cameraSelect.value);
+});
+
+getCameraDevices().then(devices => {
+  devices.forEach(({ deviceId, label }) => {
+    const option = document.createElement("option");
+    option.value = deviceId;
+    option.text = label || deviceId;
+    cameraSelect.appendChild(option);
+  });
+});
+
+
+
+
 
 (async () => {
   if (useCamera) {
-    await setupRearCameraStream();
+     await startCamera();  // Will default to rear cam or best guess
   } else {
     video.src = "video/IMG_6299.mov";
     video.load();
@@ -158,8 +186,18 @@ video.addEventListener('canplay', () => {
 
   startButton.style.left = "0px"
   startButton.style.top = String(canvas.height) + "px"
-  pauseButton.style.left = "100px"
+  startButton.style.width = "100px";
+  startButton.style.height = "50px";
+  pauseButton.style.left = "110px"
   pauseButton.style.top = String(canvas.height) + "px"
+  pauseButton.style.width = "100px";
+  pauseButton.style.height = "50px";
+
+  cameraSelect.style.left = "220px"
+  cameraSelect.style.top = String(canvas.height) + "px"
+  cameraSelect.style.width = "200px";
+  cameraSelect.style.height = "50px";
+
 
   overlay.style.left = "0px"
   overlay.style.top = "0px"

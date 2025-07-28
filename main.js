@@ -25,7 +25,7 @@ if (useCamera) {
   navigator.mediaDevices.getUserMedia({ 
     video: true, 
     audio: false, 
-    facingMode: { ideal: "environment" }, // rear camera
+    facingMode: { exact: 'environment' }, // rear camera
     width: { ideal: 600, max: 600 },      // downscale for performance
     height: { ideal: 640 },               // we'll correct this after measuring
   })

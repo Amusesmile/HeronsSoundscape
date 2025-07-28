@@ -45,8 +45,8 @@ async function startCamera(videoDeviceId = null) {
     video: {
       deviceId: videoDeviceId ? { exact: videoDeviceId } : undefined,
       facingMode: 'environment', // fallback
-      width: { ideal: 640 },
-      height: { ideal: 640 },
+      // width: { ideal: 640 },
+      // height: { ideal: 640 },
       aspectRatio: matchMedia('all and (orientation:landscape)').matches ? 16 / 9 : 9 / 16,
     },
   };

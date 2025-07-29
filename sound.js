@@ -1,19 +1,37 @@
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 //import * as Tone from 'tone';
 
-const grainPlayer = new Tone.GrainPlayer({
-  //url: 'samples/smallSalmon.mp3',
-  url: 'samples/2.mp3',
-  loop: true,
-  grainSize: 0.02,
-  overlap: 0.05
-}).toDestination();
+let movement = 0;
 
-//
+const sampleFiles = [
+  "2.mp3", 
+  "0.mp3", 
+  "1.mp3", 
+  "4.mp3",
+  "e1.mp3", 
+  "e2.mp3", 
+  "e3.mp3",
+  "pianoTemp.mp3", 
+  "smallSalmon.mp3",
+  "v1.mp3"
+];
 
-grainPlayer.sync(); // optional if syncing to transport
+const tempos = [
+  50,
+  200, 
+  500, 
+  70,
+  400
+];
 
-//await Tone.loaded(); // ensure sample is ready before using
+const reverbAmount = [
+  0.1, 
+  0.1, 
+  0.8, 
+  0.1, 
+  0.2,
+];
+
 
 // sound.js
 const reverb = new Tone.Reverb({
@@ -27,6 +45,41 @@ const dryGain = new Tone.Gain(1.0).toDestination();
 const wetGain = new Tone.Gain(0.1).connect(reverb);
 const analyser = new Tone.Analyser("waveform", 1024);
 dryGain.connect(analyser);
+
+const grainPlayers = sampleFiles.map(file => {
+  return new Tone.GrainPlayer({
+    url: `samples/${file}`,
+    loop: true,
+    grainSize: 0.02,
+    overlap: 0.05
+  }).toDestination();
+});
+
+function incrementMovement(){
+  movement += 1;
+  if(movement >= sampleFiles.length){
+    movement = 0;
+  }
+
+  let reverbAmount = Math.random();
+  let dryAmount = 1.0-reverbAmount;
+
+  dryGain.gain.rampTo(dryAmount, 5.0); // ramp to 0.8 over 0.5 seconds
+  wetGain.gain.rampTo(reverbAmount, 5.0); // ramp to 0.3 over 1 second
+
+  /*
+  dryGain.gain.value = 0.8; // reduce dry level
+wetGain.gain.value = 0.5; // increase reverb/wet level
+  */
+
+
+  TEMPO_MS = tempos[movement%tempos.length]
+  animateClusterCycle()
+}
+
+
+
+
 
 // Scale loosely inspired by Scarborough Fair (Dorian)
 const scarboroughScale = [0, 2, 3, 5, 7, 9, 10];
@@ -113,7 +166,7 @@ function playClusterGrainSound(cluster) {
   let gs = 0.01+0.1*Math.pow(brightness, 2.0);
   let overlap = gs*10;//0.1
   const player = new Tone.GrainPlayer({
-    url: grainPlayer.buffer,
+    url: grainPlayers[movement].buffer,
     loop: true,
     grainSize: gs,//(0.15 + brightness * 0.15)*0.8,
     overlap: overlap,//0.03 + (1 - brightness) * 0.05,

@@ -6,19 +6,20 @@ const overlay = document.getElementById("overlayText")
 const video = document.getElementById("video");
 const cameraSelect = document.getElementById("camera-select");
 const ctx = canvas.getContext("2d");
-const TEMPO_MS = 50;
 const MAX_CLUSTERS = 40;
 const MIN_CLUSTER_SIZE = 100; // Minimum pixels per region
 const COLOR_THRESHOLD = 40; // Max color distance per channel
 const FADE_MS = 800;
+let TEMPO_MS = 50;
 let currentCluster = -1;
 let clusters = [];
 let rhythmPattern = [];
 let rhythmStep = 0;
 let originalImageData;
 let currentVideoFrame = null;
-let useCamera = true; // Flip this to true to use live video input
+let useCamera = false; // Flip this to true to use live video input
 let started = false;
+let movementTimeMS = 0;
 
 const videoCanvas = document.createElement("canvas");
 const videoCtx = videoCanvas.getContext("2d");
@@ -419,6 +420,15 @@ function animateClusterCycle() {
       playClusterGrainSound(clusters[currentCluster]);
       rhythmStep = (rhythmStep + 1) % rhythmPattern.length;
       const delay = rhythmPattern[rhythmStep];
+      movementTimeMS += delay;
+
+      if(movementTimeMS > 10000){
+        incrementMovement();
+        const baseBeat = TEMPO_MS;
+        rhythmPattern = generateRhythmPattern(baseBeat);
+        rhythmStep = 0;
+        movementTimeMS = 0;
+      }
 
       setTimeout(step, delay);
     }

@@ -17,7 +17,7 @@ let rhythmPattern = [];
 let rhythmStep = 0;
 let originalImageData;
 let currentVideoFrame = null;
-let useCamera = false; // Flip this to true to use live video input
+let useCamera = true; // Flip this to true to use live video input
 let started = false;
 let movementTimeMS = 0;
 

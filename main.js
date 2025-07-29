@@ -17,9 +17,12 @@ let rhythmPattern = [];
 let rhythmStep = 0;
 let originalImageData;
 let currentVideoFrame = null;
-let useCamera = true; // Flip this to true to use live video input
 let started = false;
 let movementTimeMS = 0;
+let isTouching = false;
+let touchX = 0;
+let touchY = 0;
+let useCamera = true; // Flip this to true to use live video input
 
 const videoCanvas = document.createElement("canvas");
 const videoCtx = videoCanvas.getContext("2d");
@@ -391,7 +394,13 @@ function playNextCluster() {
   cluster.data = imageData;
 
   for (let i = 0; i < cluster.locations.length; i++) {
-    const [x, y] = cluster.locations[i];
+    let [x, y] = cluster.locations[i];
+    console.log("Calculating: ", touchX, touchY, x, y);
+    if(isTouching)
+    {
+      x = Math.floor(x + (touchX-x)*0.7);
+      y = Math.floor(y + (touchY-y)*0.7);
+    }
     const visited = Array.from({ length: height }, () => Array(width).fill(false));
     const points = floodFillCluster(x, y, visited, data, width, height, COLOR_THRESHOLD ** 2);
     if (points.length >= MIN_CLUSTER_SIZE) {
@@ -422,7 +431,7 @@ function animateClusterCycle() {
       const delay = rhythmPattern[rhythmStep];
       movementTimeMS += delay;
 
-      if(movementTimeMS > 10000){
+      if(movementTimeMS > 10000 && !video.paused){
         incrementMovement();
         const baseBeat = TEMPO_MS;
         rhythmPattern = generateRhythmPattern(baseBeat);
@@ -457,4 +466,54 @@ pauseButton.addEventListener("click", function(){
     video.pause()  
   }
   
+});
+
+
+
+
+function getCanvasCoords(event, canvas) {
+  const rect = canvas.getBoundingClientRect();
+  let clientX, clientY;
+
+  if (event.touches && event.touches.length > 0) {
+    clientX = event.touches[0].clientX;
+    clientY = event.touches[0].clientY;
+  } else {
+    clientX = event.clientX;
+    clientY = event.clientY;
+  }
+
+  touchX = Math.floor((clientX - rect.left) * (canvas.width / rect.width));
+  touchY = Math.floor((clientY - rect.top) * (canvas.height / rect.height));
+}
+
+// TOUCH EVENTS
+canvas.addEventListener("touchstart", (event) => {
+  isTouching = true;
+  getCanvasCoords(event, canvas);
+});
+
+canvas.addEventListener("touchend", () => {
+  isTouching = false;
+});
+
+canvas.addEventListener("touchmove", (event) => {
+  getCanvasCoords(event, canvas);
+  // handle move if needed
+}, { passive: false });
+
+// MOUSE EVENTS
+canvas.addEventListener("mousedown", (event) => {
+  isTouching = true;
+  getCanvasCoords(event, canvas);
+});
+
+canvas.addEventListener("mouseup", () => {
+  isTouching = false;
+});
+
+canvas.addEventListener("mousemove", (event) => {
+  if (!isTouching) return;
+  getCanvasCoords(event, canvas);
+  // handle drag if needed
 });
